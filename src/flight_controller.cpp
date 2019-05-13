@@ -9,7 +9,7 @@
 #include "Variables.h"
 #include "PID_v1.h"
 #include <microsmooth.h>
-
+#include <Sensor.h>
 // class default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
 // AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
@@ -18,6 +18,7 @@ MPU6050 mpu;
 Servo y_servo;
 Servo x_servo;
 Variables vars;
+Gyroscope gyro;
 double yaw_servoPIDvalue;
 double Setpoint = 0;
 double kp = 1, kd = 0.25, ki = 0.05;
@@ -116,12 +117,7 @@ void readAngle()
 #endif
   }
 }
-void moveServo(Servo &servo, float angle)
-{
-  uint8_t mappedAngle = (uint8_t)angle;
-  uint8_t servoPos = map(mappedAngle, -45, 45, 0, 180);
-  servo.write(servoPos);
-}
+
 
 void setup()
 {
@@ -197,9 +193,9 @@ void loop()
 
   readAngle();
 
-  yawPID.Compute();
-  printYPR();
-  //moveServo(x_servo, vars.ypr[0]);
-  //moveServo(y_servo, vars.ypr[1]);
-  delay(15);
+  if(yawPID.Compute()){
+    //moveServo(x_servo, vars.ypr[0]);
+    //moveServo(y_servo, vars.ypr[1]);
+    
+  }
 }
