@@ -1,30 +1,23 @@
-//#include "I2Cdev.h"
-#include "Servo.h"
-/*
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-#include "Wire.h"
-#endif
-*/
-#include "PID_v1.h"
-#include <microsmooth.h>
 #include <Sensor.h>
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
-// AD0 high = 0x69
-Servo y_servo;
-Servo x_servo;
-Gyroscope gyro;
-double yaw_servoPIDvalue;
-double Setpoint = 0;
-double kp = 1, kd = 0.25, ki = 0.05;
-double yaw_pid, pitch_pid, roll_pid;
-uint16_t *ptr;
-PID yawPID(&yaw_pid, &yaw_servoPIDvalue, &Setpoint, kp, ki, kd, DIRECT);
+#include "Servo.h"
+#include <vector>
+#include "PID_v1.h"
 
-#define Y_SERVO_PIN 9
-#define X_SERVO_PIN 8
-#define INTERRUPT_PIN 2 // use pin 2 on Arduino Uno & most boards
+Servo yaw_servo;
+Servo pitch_servo;
+Gyroscope gyro;
+double yaw_servoPID_val, pitch_servoPID_val;
+double yawSetpoint = 0, pitchSetpoint = 0;
+double kp = 1, kd = 0.25, ki = 0.05;
+double yaw_pid, pitch_pid;
+uint16_t *yaw_ptr, *pitch_ptr;
+PID yawPID(&yaw_pid, &yaw_servoPID_val, &yawSetpoint, kp, ki, kd, DIRECT);
+PID pitchPID(&pitch_pid, &pitch_servoPID_val, &pitchSetpoint, kp, ki, kd, DIRECT);
+
+#define YAW_SERVO_PIN 9   // Y axis
+#define PITCH_SERVO_PIN 8 // X axis
+#define INTERRUPT_PIN 2   // use pin 2 on Arduino Uno & most boards
+#define SERVO_BASE 90
 
 void startUp(Servo &servo, String command)
 {
@@ -65,30 +58,45 @@ void setup()
   //Serial.println(F("Initializing I2C devices..."));
   gyro.setup(INTERRUPT_PIN);
   //SERVO setup
-  y_servo.attach(Y_SERVO_PIN);
-  x_servo.attach(X_SERVO_PIN);
-  y_servo.write(90);
-  x_servo.write(90);
+  yaw_servo.attach(YAW_SERVO_PIN);
+  pitch_servo.attach(PITCH_SERVO_PIN);
+  yaw_servo.write(SERVO_BASE);
+  pitch_servo.write(SERVO_BASE);
   //PID
   yawPID.SetMode(AUTOMATIC);
-  //filtering
-  ptr = ms_init(SGA);
-  if (ptr == NULL)
-    Serial.println("No memory");
+  /* //filtering
+  yaw_ptr = ms_init(SGA);
+  pitch_ptr = ms_init(SGA);
+  if (yaw_ptr == NULL or pitch_ptr == NULL)
+    Serial.println("No memory for filters");
+    */
 }
 
-void printYPR()
+void log_csv(std::vector<double> &data)
 {
-  String str = "Yaw: " + (String)yaw_pid + "\t" + "pitch_pid: " + (String)pitch_pid + "\t" + "roll_pid: " + (String)roll_pid;
-  String str2 = (String)yaw_pid + "," + (String)pitch_pid + "," + (String)roll_pid;
-  Serial.println(str2);
+  String l;
+  for (double x : data)
+  {
+    l += (String)x + ",";
+  }
+  Serial.println(l);
 }
+
 void loop()
 {
 
   gyro.readAngle();
 
+  std::vector<double> log_data = {gyro.yaw, gyro.pitch, gyro.roll};
+
   if (yawPID.Compute())
   {
   }
+  if (pitchPID.Compute())
+  {
+    //move pitch servo
+  }
+  log_data.push_back(yawSetpoint);
+  log_data.push_back(pitchSetpoint);
+  log_csv(log_data);
 }

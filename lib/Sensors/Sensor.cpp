@@ -19,12 +19,12 @@ void copydmp(bool *mpuInterrupt)
 { //perform before attachInterrupt(...)
     *tempDmp = mpuInterrupt;
 }
-void dmpDataReady()
+inline void dmpDataReady()
 {
     *tempDmp = true;
 }
 
-void Gyroscope::readAngle(bool startup = false)
+void Gyroscope::readAngle(bool startup)
 {
     // if programming failed, don't try to do anything
     if (dmpReady)

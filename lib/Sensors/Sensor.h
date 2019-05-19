@@ -1,8 +1,5 @@
-
-#include <stdint.h>
-#include <Arduino.h>
-#include "helper_3dmath.h"
-#include "MPU6050_6Axis_MotionApps20.h"
+#pragma once
+#include <MPU6050_6Axis_MotionApps20.h>
 
 #define OUTPUT_READABLE
 
@@ -29,10 +26,8 @@ public:
     double yaw_offset;
     double pitch_offset;
     double roll_offset;
-
     MPU6050 mpu;
 
-    //ex Variables class
 private:
     bool dmpReady = false;  // set true if DMP init was successful
     uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
