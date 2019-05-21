@@ -5,7 +5,7 @@
 
 Servo yaw_servo;
 Servo pitch_servo;
-Gyroscope gyro;
+Gyroscope *gyro;
 double yaw_servoPID_val, pitch_servoPID_val;
 double yawSetpoint = 0, pitchSetpoint = 0;
 double kp = 1, kd = 0.25, ki = 0.05;
@@ -37,6 +37,9 @@ void startUp(Servo &servo, String command)
   }
 }
 
+
+
+
 void setup()
 {
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -56,7 +59,7 @@ void setup()
 
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
-  gyro.setup(INTERRUPT_PIN);
+  gyro->setup(INTERRUPT_PIN);
   //SERVO setup
   yaw_servo.attach(YAW_SERVO_PIN);
   pitch_servo.attach(PITCH_SERVO_PIN);
@@ -64,12 +67,7 @@ void setup()
   pitch_servo.write(SERVO_BASE);
   //PID
   yawPID.SetMode(AUTOMATIC);
-  /* //filtering
-  yaw_ptr = ms_init(SGA);
-  pitch_ptr = ms_init(SGA);
-  if (yaw_ptr == NULL or pitch_ptr == NULL)
-    Serial.println("No memory for filters");
-    */
+
 }
 
 void log_csv(std::vector<double> &data)
@@ -85,9 +83,9 @@ void log_csv(std::vector<double> &data)
 void loop()
 {
 
-  gyro.readAngle();
+  //gyro->readAngle();
 
-  std::vector<double> log_data = {gyro.yaw, gyro.pitch, gyro.roll};
+  std::vector<double> log_data = {gyro->yaw, gyro->pitch, gyro->roll};
 
   if (yawPID.Compute())
   {
