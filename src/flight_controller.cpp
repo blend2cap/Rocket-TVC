@@ -1,6 +1,5 @@
 #include <Sensor.h>
 #include "Servo.h"
-#include <vector>
 #include "PID_v1.h"
 
 Servo yaw_servo;
@@ -37,9 +36,6 @@ void startUp(Servo &servo, String command)
   }
 }
 
-
-
-
 void setup()
 {
   // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -67,7 +63,6 @@ void setup()
   pitch_servo.write(SERVO_BASE);
   //PID
   yawPID.SetMode(AUTOMATIC);
-
 }
 
 void log_csv(std::vector<double> &data)
@@ -85,8 +80,6 @@ void loop()
 
   //gyro->readAngle();
 
-  std::vector<double> log_data = {gyro->yaw, gyro->pitch, gyro->roll};
-
   if (yawPID.Compute())
   {
   }
@@ -94,7 +87,5 @@ void loop()
   {
     //move pitch servo
   }
-  log_data.push_back(yawSetpoint);
-  log_data.push_back(pitchSetpoint);
-  log_csv(log_data);
+  Serial.println(gyro->log_Orientation());
 }
