@@ -4,9 +4,9 @@
 
 Servo yaw_servo;
 Servo pitch_servo;
-Gyroscope *gyro;
+Gyroscope gyro;
 double yaw_servoPID_val, pitch_servoPID_val;
-double yawSetpoint = 0, pitchSetpoint = 0;
+double yawSetpoint = 0.0, pitchSetpoint = 0.0; //values to read to correct rocket orientation
 double kp = 1, kd = 0.25, ki = 0.05;
 double yaw_pid, pitch_pid;
 uint16_t *yaw_ptr, *pitch_ptr;
@@ -18,74 +18,44 @@ PID pitchPID(&pitch_pid, &pitch_servoPID_val, &pitchSetpoint, kp, ki, kd, DIRECT
 #define INTERRUPT_PIN 2   // use pin 2 on Arduino Uno & most boards
 #define SERVO_BASE 90
 
-void startUp(Servo &servo, String command)
+void servoReset(Servo &servo, int pin)
 {
-  int servoReadAngle;
-  int intcommand = command.toInt();
-  Serial.println("Type command: ");
-  switch (intcommand)
-  {
-  case 8:
-    servoReadAngle = servo.read();
-    servo.write(++servoReadAngle);
-    break;
-  case 9:
-    servoReadAngle = servo.read();
-    servo.write(--servoReadAngle);
-    break;
-  }
+  servo.attach(pin);
+  servo.write(180);
+  servo.write(SERVO_BASE);
 }
 
 void setup()
 {
-  // join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  Wire.begin();
-  Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Fastwire::setup(400, true);
-#endif
-
   // initialize serial communication
   // (115200 chosen because it is required for Teapot Demo output, but it's
   // really up to you depending on your project)
-  Serial.begin(38400);
-  while (!Serial)
-    ; // wait for Leonardo enumeration, others continue immediately
+  Serial.begin(9600); //38400 looks fine, 115200 resets the board
 
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
-  gyro->setup(INTERRUPT_PIN);
+  gyro.setup(INTERRUPT_PIN);
+
   //SERVO setup
-  yaw_servo.attach(YAW_SERVO_PIN);
-  pitch_servo.attach(PITCH_SERVO_PIN);
-  yaw_servo.write(SERVO_BASE);
-  pitch_servo.write(SERVO_BASE);
+  servoReset(yaw_servo, YAW_SERVO_PIN);
+  servoReset(pitch_servo, YAW_SERVO_PIN);
   //PID
   yawPID.SetMode(AUTOMATIC);
-}
-
-void log_csv(std::vector<double> &data)
-{
-  String l;
-  for (double x : data)
-  {
-    l += (String)x + ",";
-  }
-  Serial.println(l);
 }
 
 void loop()
 {
 
-  //gyro->readAngle();
-
+  gyro.readAngle();
+  //Serial.println(gyro.log_raw_quaternion());
+  //Serial.println(gyro.log_euler());
+  //Serial.println(gyro.log_Orientation());
   if (yawPID.Compute())
   {
+    //Serial.println("Yaw: " + (String)yawSetpoint);
   }
   if (pitchPID.Compute())
   {
-    //move pitch servo
+    //Serial.println("Pitch: " + (String)pitchSetpoint);
   }
-  Serial.println(gyro->log_Orientation());
 }
