@@ -1,29 +1,21 @@
 #include <Sensor.h>
 #include "Servo.h"
 #include "PID_v1.h"
-
-Servo yaw_servo;
-Servo pitch_servo;
-Gyroscope gyro;
-double yaw_servoPID_val, pitch_servoPID_val;
-double yawSetpoint = 0.0, pitchSetpoint = 0.0; //values to read to correct rocket orientation
-double kp = 1, kd = 0.25, ki = 0.05;
-double yaw_pid, pitch_pid;
-uint16_t *yaw_ptr, *pitch_ptr;
-PID yawPID(&yaw_pid, &yaw_servoPID_val, &yawSetpoint, kp, ki, kd, DIRECT);
-PID pitchPID(&pitch_pid, &pitch_servoPID_val, &pitchSetpoint, kp, ki, kd, DIRECT);
+#include "Actuator.h"
 
 #define YAW_SERVO_PIN 9   // Y axis
 #define PITCH_SERVO_PIN 8 // X axis
 #define INTERRUPT_PIN 2   // use pin 2 on Arduino Uno & most boards
-#define SERVO_BASE 90
 
-void servoReset(Servo &servo, int pin)
-{
-  servo.attach(pin);
-  servo.write(180);
-  servo.write(SERVO_BASE);
-}
+Actuator yaw_servo;
+Actuator pitch_servo;
+Gyroscope gyro;
+double yaw_servoPID_out, pitch_servoPID_out;
+double yawSetpoint = 0.0, pitchSetpoint = 0.0; //values to read to correct rocket orientation
+double kp = 50, kd = 0.25, ki = 1;
+double yaw_pid = 0, pitch_pid = 0;
+PID yawPID(&yaw_pid, &yaw_servoPID_out, &yawSetpoint, kp, ki, kd, DIRECT);
+PID pitchPID(&pitch_pid, &pitch_servoPID_out, &pitchSetpoint, kp, ki, kd, DIRECT);
 
 void setup()
 {
@@ -37,23 +29,39 @@ void setup()
   gyro.setup(INTERRUPT_PIN);
 
   //SERVO setup
-  servoReset(yaw_servo, YAW_SERVO_PIN);
-  servoReset(pitch_servo, YAW_SERVO_PIN);
+  yaw_servo.setupServo(YAW_SERVO_PIN);
   //PID
+  yawPID.SetOutputLimits(1200, 1800); // 90°+-30°
   yawPID.SetMode(AUTOMATIC);
 }
+
+//maps input angle in deg to PWM
 
 void loop()
 {
 
   gyro.readAngle();
+  //update PID input
+  yaw_pid = gyro.getEuler().y * 55;
   //Serial.println(gyro.log_raw_quaternion());
   //Serial.println(gyro.log_euler());
   //Serial.println(gyro.log_Orientation());
+  //Serial.println(gyro.log_euler());
   if (yawPID.Compute())
   {
-    //Serial.println("Yaw: " + (String)yawSetpoint);
+    //Print current val vs setpoint
+    Serial.println((String)gyro.getEuler().y + ",  " + (String)yaw_servoPID_out);
+    //Serial.println("Yaw PID: " + (String)yaw_servoPID_out);
+    // Serial.println("Euler:  " + (String)gyro.log_euler());
+    // int angle = map_angle(yaw_servoPID_out);
+    // Serial.println(angle);
+    // yaw_servo.moveServo(round(yaw_servoPID_out * 10));
+    // Serial.println(yaw_servo.logServoPos());
   }
+  // yaw_servo.moveServo(1700);
+  // yaw_servo.moveServo(1000);
+  // yaw_servo.moveServo(2000);
+  yaw_servo.moveServo(yaw_servoPID_out);
   if (pitchPID.Compute())
   {
     //Serial.println("Pitch: " + (String)pitchSetpoint);

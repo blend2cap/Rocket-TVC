@@ -34,7 +34,7 @@ class Gyroscope
 private:
     VectorInt16 acceleration;  //acceleration from IMU un-filtered
     VectorInt16 angular_speed; //gyro rad/s from IMU un-filtered
-    VectorFloat EulerOrientation;
+
     Quaternion SEq; //filtered SEq quaternion
     MPU6050 mpu;
 
@@ -72,7 +72,7 @@ public:
 
     Quaternion MadwickFilterUpdate();
     Quaternion getOrientantion();
-    VectorFloat getEuler() { return EulerOrientation; }
+    VectorFloat getEuler();
 
     String log_Orientation(bool quat_only = true);
     String log_raw_quaternion();
@@ -113,7 +113,7 @@ void Gyroscope::setup(int interrupt_pin)
         LOG(F("DMP ready! Waiting for first interrupt..."));
         dmpReady = true;
         packetSize = mpu.dmpGetFIFOPacketSize();
-        //read first 500 values to get offset quaternion
+        //let gyro stabilize for 15 seconds to self-calibrate
         setQuaternionOffset();
     }
     else
@@ -204,12 +204,6 @@ void Gyroscope::readAngle()
             mpu.dmpGetAccel(&acceleration, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q_raw);
             mpu.dmpGetGyro(&angular_speed, fifoBuffer);
-            float ypr[3];
-            // mpu.dmpGetYawPitchRoll(ypr, &q_raw, &gravity);
-            mpu.dmpGetEuler(ypr, &q_raw);
-            EulerOrientation.x = ypr[0];
-            EulerOrientation.y = ypr[1];
-            EulerOrientation.z = ypr[2];
             //LOG("dmp read successfully");
         }
         else
@@ -221,6 +215,37 @@ Quaternion Gyroscope::getOrientantion()
 {
     q_orientation = q_raw.getProduct(q_offset);
     return q_orientation;
+}
+
+VectorFloat Gyroscope::getEuler()
+{
+    VectorFloat eul;
+    Quaternion quat = getOrientantion();
+    // Quaternion quat = q_raw;
+    double sqw = quat.w * quat.w;
+    double sqx = quat.x * quat.x;
+    double sqy = quat.y * quat.y;
+    double sqz = quat.z * quat.z;
+    double unit = sqx + sqy + sqz + sqw; // if normalised is one, otherwise is correction factor
+    double test = quat.x * quat.y + quat.z * quat.w;
+    if (test > 0.499 * unit)
+    { // singularity at north pole
+        eul.y = 2 * atan2(quat.x, quat.w);
+        eul.z = M_PI_2;
+        eul.x = 0;
+        return eul;
+    }
+    if (test < -0.499 * unit)
+    { // singularity at south pole
+        eul.y = -2 * atan2(quat.x, quat.w);
+        eul.z = -M_PI_2;
+        eul.x = 0;
+        return eul;
+    }
+    eul.y = atan2(2 * quat.y * quat.w - 2 * quat.x * quat.z, sqx - sqy - sqz + sqw);
+    eul.z = asin(2 * test / unit);
+    eul.x = atan2(2 * quat.x * quat.w - 2 * quat.y * quat.z, -sqx + sqy - sqz + sqw);
+    return eul;
 }
 
 Quaternion Gyroscope::MadwickFilterUpdate()
@@ -327,10 +352,10 @@ String Gyroscope::log_offsets()
 
 String Gyroscope::log_euler()
 {
-    VectorFloat EulerDeg = EulerOrientation;
-    EulerDeg.x = EulerOrientation.x * 180 / M_PI;
-    EulerDeg.y = EulerOrientation.y * 180 / M_PI;
-    EulerDeg.z = EulerOrientation.z * 180 / M_PI;
+    VectorFloat EulerDeg = getEuler();
+    EulerDeg.x = EulerDeg.x * 180 / M_PI;
+    EulerDeg.y = EulerDeg.y * 180 / M_PI;
+    EulerDeg.z = EulerDeg.z * 180 / M_PI;
     String header = "Euler: \t";
     String l = (String)EulerDeg.x + "," +
                (String)EulerDeg.y + "," +
