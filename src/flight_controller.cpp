@@ -1,15 +1,18 @@
-#include <Sensor.h>
-#include "Servo.h"
+#include "Gyroscope.h"
+#include "Altimeter.h"
 #include "PID_v1.h"
 #include "Actuator.h"
 
 #define YAW_SERVO_PIN 9   // Y axis
 #define PITCH_SERVO_PIN 8 // X axis
 #define INTERRUPT_PIN 2   // use pin 2 on Arduino Uno & most boards
+#define MIN_SERVO 1200    // 60°
+#define MAX_SERVO 1800    //120°
 
 Actuator yaw_servo;
 Actuator pitch_servo;
 Gyroscope gyro;
+Altimeter altimeter;
 double yaw_servoPID_out, pitch_servoPID_out;
 double yawSetpoint = 0.0, pitchSetpoint = 0.0; //values to read to correct rocket orientation
 double kp = 50, kd = 0.25, ki = 1;
@@ -27,12 +30,15 @@ void setup()
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
   gyro.setup(INTERRUPT_PIN);
-
+  altimeter.setup();
   //SERVO setup
+  pitch_servo.setupServo(PITCH_SERVO_PIN);
   yaw_servo.setupServo(YAW_SERVO_PIN);
   //PID
-  yawPID.SetOutputLimits(1200, 1800); // 90°+-30°
+  yawPID.SetOutputLimits(MIN_SERVO, MAX_SERVO);
   yawPID.SetMode(AUTOMATIC);
+  pitchPID.SetOutputLimits(MIN_SERVO, MAX_SERVO);
+  pitchPID.SetMode(AUTOMATIC);
 }
 
 //maps input angle in deg to PWM
@@ -41,29 +47,19 @@ void loop()
 {
 
   gyro.readAngle();
+  altimeter.getRocketAltitude();
   //update PID input
-  yaw_pid = gyro.getEuler().y * 55;
-  //Serial.println(gyro.log_raw_quaternion());
-  //Serial.println(gyro.log_euler());
-  //Serial.println(gyro.log_Orientation());
-  //Serial.println(gyro.log_euler());
+  VectorFloat eulers = gyro.getEuler();
+  pitch_pid = eulers.x * 55;
+  yaw_pid = eulers.y * 55;
   if (yawPID.Compute())
   {
     //Print current val vs setpoint
-    Serial.println((String)gyro.getEuler().y + ",  " + (String)yaw_servoPID_out);
-    //Serial.println("Yaw PID: " + (String)yaw_servoPID_out);
-    // Serial.println("Euler:  " + (String)gyro.log_euler());
-    // int angle = map_angle(yaw_servoPID_out);
-    // Serial.println(angle);
-    // yaw_servo.moveServo(round(yaw_servoPID_out * 10));
-    // Serial.println(yaw_servo.logServoPos());
+    yaw_servo.moveServo(yaw_servoPID_out);
   }
-  // yaw_servo.moveServo(1700);
-  // yaw_servo.moveServo(1000);
-  // yaw_servo.moveServo(2000);
-  yaw_servo.moveServo(yaw_servoPID_out);
   if (pitchPID.Compute())
   {
-    //Serial.println("Pitch: " + (String)pitchSetpoint);
+    Serial.println((String)eulers.x + ",  " + (String)pitch_servoPID_out);
+    pitch_servo.moveServo(pitch_servoPID_out);
   }
 }

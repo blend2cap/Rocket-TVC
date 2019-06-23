@@ -133,7 +133,7 @@ void Gyroscope::setQuaternionOffset()
     long oldTime, deltaTime, currentTime = 0L;
     deltaTime = 0L;
     currentTime = millis();
-    while (deltaTime <= 15000L) //15 seconds
+    while (deltaTime <= 8000L) //8 seconds
     {
         oldTime = currentTime;
         currentTime = millis();
@@ -166,6 +166,8 @@ void Gyroscope::readAngle()
             fifoCount = mpu.getFIFOCount();
             LOG("fifoCount" + (String)fifoCount);
         }
+        if (mpuInterrupt) //yes I'm paranoid
+            break;
     }
 
     // reset interrupt flag and get INT_STATUS byte
@@ -193,6 +195,8 @@ void Gyroscope::readAngle()
         // read a packet from FIFO
         mpu.getFIFOBytes(fifoBuffer, packetSize);
 
+        // clear FIFO as suggested here https://arduino.stackexchange.com/questions/10308/how-to-clear-fifo-buffer-on-mpu6050
+        mpu.resetFIFO();
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;

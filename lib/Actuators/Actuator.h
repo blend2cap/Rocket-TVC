@@ -50,14 +50,14 @@ void Actuator::moveServo(int pid_pulse)
     {
         return;
     }
-    //if less than 60° (-30°)
+    //input should be normalized but double check anyway
     if (pid_pulse < 1200)
         pid_pulse = 1200;
-    //if greater than 120° (+30°)
     if (pid_pulse > 1800)
         pid_pulse = 1800;
-
     target = pid_pulse;
+    if (target == pos)
+        return;
     lastUpdate = millis();
     this->delta_t = SPEED * abs(target - pos);
     servo.writeMicroseconds(target);
