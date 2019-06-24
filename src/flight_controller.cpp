@@ -59,7 +59,8 @@ void loop()
   }
   if (pitchPID.Compute())
   {
-    Serial.println((String)eulers.x + ",  " + (String)pitch_servoPID_out);
+    //Serial.println((String)eulers.x + ",  " + (String)pitch_servoPID_out);
     pitch_servo.moveServo(pitch_servoPID_out);
   }
+  Serial.println(altimeter.log_altitude());
 }

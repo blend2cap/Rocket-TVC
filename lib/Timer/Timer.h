@@ -6,8 +6,7 @@ struct timer
     long delta = 0L;
     long current = 0L;
     long interval; //1 second
-
-}
+};
 
 class Timer
 {
