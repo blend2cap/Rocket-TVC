@@ -25,7 +25,7 @@ public:
 
     void setupServo(int pin, int min, int max);
     void moveServo(int pulse);
-    String logServoPos();
+    const String logServoPos();
     //void logData(SD card, Data data)
 };
 
@@ -64,7 +64,7 @@ void Actuator::moveServo(int pid_pulse)
     pos = target;
 }
 
-String Actuator::logServoPos()
+const String Actuator::logServoPos()
 {
     return (String)pos;
 }

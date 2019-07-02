@@ -3,7 +3,7 @@
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <vector>
 
-#define DEBUG
+//#define DEBUG
 #define OUTPUT_READABLE
 #define deltat 0.001f
 #define gyroMeasError 3.14159265358979f * (5.0f / 180.0f)
@@ -15,19 +15,6 @@
 #define LOG(X)
 #endif
 
-// class Sensor
-// {
-// protected:
-//     String id;
-
-// public:
-//     Sensor(String id = "Sensor_001") {}
-//     ~Sensor() {}
-
-//     String getID() { return this->id; }s
-//     inline void setID(String ID) { this->id = ID; }
-// };
-
 class Gyroscope
 {
 
@@ -35,7 +22,6 @@ private:
     VectorInt16 acceleration;  //acceleration from IMU un-filtered
     VectorInt16 angular_speed; //gyro rad/s from IMU un-filtered
 
-    Quaternion SEq; //filtered SEq quaternion
     MPU6050 mpu;
 
     bool dmpReady = false;              // set true if DMP init was successful
@@ -50,14 +36,14 @@ private:
     VectorFloat gravity;                // [x, y, z]            gravity vector
     volatile bool mpuInterrupt = false; // indicates whether MPU interrupt pin has gone high
     //calibration variables
-    int buffersize = 1000;
-    uint8_t accel_deadzone = 8;
-    uint8_t gyro_deadzone = 1;
+    const uint16_t buffersize = 1000;
+    const uint8_t accel_deadzone = 8;
+    const uint8_t gyro_deadzone = 1;
     VectorInt16 meanAccel;
     VectorInt16 meanGyro;
     VectorInt16 acceleration_offset;
     VectorInt16 gyro_offset;
-    int state = 0;
+    uint8_t state = 0;
     //calibration methods
     void meansensors();
     void calibration();
@@ -70,14 +56,14 @@ public:
     void setup(int interrupt_pin);
     void readAngle();
 
-    Quaternion MadwickFilterUpdate();
     Quaternion getOrientantion();
     VectorFloat getEuler();
 
-    String log_Orientation(bool quat_only = true);
+    String log_Orientation(bool showHeader = false);
     String log_raw_quaternion();
     String log_offsets();
-    String log_euler();
+    String log_euler(bool showHeader = false);
+    String log_acceleration(bool showHeader = false);
 };
 
 volatile bool *ptr;
@@ -110,7 +96,7 @@ void Gyroscope::setup(int interrupt_pin)
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        LOG(F("DMP ready! Waiting for first interrupt..."));
+        LOG("DMP ready! Waiting for first interrupt...");
         dmpReady = true;
         packetSize = mpu.dmpGetFIFOPacketSize();
         //let gyro stabilize for 15 seconds to self-calibrate
@@ -123,7 +109,7 @@ void Gyroscope::setup(int interrupt_pin)
         // 2 = DMP configuration updates failed
         // (if it's going to break, usually the code will be 1)
         Serial.print(F("DMP Initialization failed (code "));
-        Serial.print((String)devStatus + ")");
+        //Serial.print((String)devStatus + ")");
     }
 }
 
@@ -140,7 +126,7 @@ void Gyroscope::setQuaternionOffset()
         deltaTime = deltaTime + currentTime - oldTime;
         readAngle();
         q_offset = q_raw.getConjugate();
-        Serial.print('.');
+        LOG('.');
     }
 }
 
@@ -252,84 +238,20 @@ VectorFloat Gyroscope::getEuler()
     return eul;
 }
 
-Quaternion Gyroscope::MadwickFilterUpdate()
+#ifdef DEBUG
+String Gyroscope::log_Orientation(bool showHeader)
 {
-    //Local system variables
-    Quaternion SEqDot_omega;                                  // quaternion derivative from gyroscope elements
-    float f_1, f_2, f_3;                                      // objective function elements
-    float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; // objective function Jacobian elements
-    Quaternion SEqHatDot;                                     // estimated direction of the gyroscope error
-
-    // Axulirary variables to avoid reapeated calcualtions
-    Quaternion half_SEq(0.5 * SEq.w,
-                        0.5 * SEq.x,
-                        0.5 * SEq.y,
-                        0.5 * SEq.z);
-    Quaternion two_SEq(2 * SEq.w,
-                       2 * SEq.x,
-                       2 * SEq.y,
-                       2 * SEq.z);
-
-    // Normalise the accelerometer measurement
-    acceleration.normalize();
-    angular_speed.normalize();
-
-    // Compute the objective function and Jacobian
-    f_1 = two_SEq.x * SEq.z - two_SEq.w * SEq.y - acceleration.x;
-    f_2 = two_SEq.w * SEq.x + two_SEq.y * SEq.z - acceleration.y;
-    f_3 = 1.0f - two_SEq.x * SEq.x - two_SEq.y * SEq.y - acceleration.z;
-    J_11or24 = two_SEq.y;
-    J_12or23 = 2.0f * SEq.z;
-    J_13or22 = two_SEq.w;
-    J_14or21 = two_SEq.x;
-    J_32 = 2.0f * J_14or21;
-    J_33 = 2.0f * J_11or24;
-    // J_11 negated in matrix multiplication
-    // J_12 negated in matrix multiplication
-    // negated in matrix multiplication
-    // negated in matrix multiplication
-
-    // Compute the gradient (matrix multiplication)
-    SEqHatDot.w = J_14or21 * f_2 - J_11or24 * f_1;
-    SEqHatDot.x = J_12or23 * f_1 + J_13or22 * f_2 - J_32 * f_3;
-    SEqHatDot.y = J_12or23 * f_2 - J_33 * f_3 - J_13or22 * f_1;
-    SEqHatDot.z = J_14or21 * f_1 + J_11or24 * f_2;
-    // Normalise the gradient
-    SEqHatDot.normalize();
-
-    // Compute the quaternion derivative measured by gyroscopes
-
-    SEqDot_omega.w = -half_SEq.x * angular_speed.x - half_SEq.y * angular_speed.y - half_SEq.z * angular_speed.z;
-    SEqDot_omega.x = half_SEq.w * angular_speed.x + half_SEq.y * angular_speed.z - half_SEq.z * angular_speed.y;
-    SEqDot_omega.y = half_SEq.w * angular_speed.y - half_SEq.x * angular_speed.z + half_SEq.z * angular_speed.x;
-    SEqDot_omega.z = half_SEq.w * angular_speed.z + half_SEq.x * angular_speed.y - half_SEq.y * angular_speed.x;
-    // Compute then integrate the estimated quaternion derivative
-    SEq.w += (SEqDot_omega.w - (beta * SEqHatDot.w)) * deltat;
-    SEq.x += (SEqDot_omega.x - (beta * SEqHatDot.x)) * deltat;
-    SEq.y += (SEqDot_omega.y - (beta * SEqHatDot.y)) * deltat;
-    SEq.z += (SEqDot_omega.z - (beta * SEqHatDot.z)) * deltat;
-
-    // Normalise quaternion
-    SEq.normalize();
-    return SEq;
-}
-
-String Gyroscope::log_Orientation(bool quat_only)
-{
-    String header = "Orientation Quaternion:\t";
     Quaternion q = getOrientantion();
     String l = (String)q.w + "," +
                (String)q.x + "," +
                (String)q.y + "," +
-               (String)q.z;
-    if (quat_only)
+               (String)q.z + ",";
+    if (showHeader)
     {
-        return l;
-    }
-    else
-    {
+        String header = "Orientation Quaternion:\t";
         return header + l;
     }
+    return l;
 }
 
 String Gyroscope::log_raw_quaternion()
@@ -338,7 +260,7 @@ String Gyroscope::log_raw_quaternion()
     String l = (String)q_raw.w + "," +
                (String)q_raw.x + "," +
                (String)q_raw.y + "," +
-               (String)q_raw.z;
+               (String)q_raw.z + ",";
     return l;
 }
 
@@ -350,21 +272,37 @@ String Gyroscope::log_offsets()
                (String)acceleration_offset.z + "," +
                (String)gyro_offset.x + "," +
                (String)gyro_offset.y + "," +
-               (String)gyro_offset.z;
+               (String)gyro_offset.z + ", ";
     return header + l;
 }
-
-String Gyroscope::log_euler()
+#endif
+String Gyroscope::log_euler(bool showHeader)
 {
     VectorFloat EulerDeg = getEuler();
     EulerDeg.x = EulerDeg.x * 180 / M_PI;
     EulerDeg.y = EulerDeg.y * 180 / M_PI;
     EulerDeg.z = EulerDeg.z * 180 / M_PI;
-    String header = "Euler: \t";
     String l = (String)EulerDeg.x + "," +
                (String)EulerDeg.y + "," +
-               (String)EulerDeg.z;
-    //return header + l;
+               (String)EulerDeg.z + ",";
+    if (showHeader)
+    {
+        String header = "Euler: \t";
+        return header + l;
+    }
+    return l;
+}
+
+String Gyroscope::log_acceleration(bool showHeader)
+{
+    String l = (String)acceleration.x + "," +
+               (String)acceleration.y + "," +
+               (String)acceleration.z + ",";
+    if (showHeader)
+    {
+        String header = "Accelerations: \t";
+        return header + l;
+    }
     return l;
 }
 

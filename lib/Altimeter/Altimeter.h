@@ -4,18 +4,15 @@
 #include "Timer.h"
 #include "SimpleKalmanFilter.h"
 
-#define SETUP_SAMPLES 15
-
 class Altimeter
 {
 private:
     SimpleKalmanFilter filter = SimpleKalmanFilter(1.5f, 1.f, 0.01f);
     MPL3115A2 altimeter;
-    Timer timer = Timer(7000);
+    Timer timer = Timer(7000, 130);
 
     float local_altitude = 0;
     float rocket_altitude = 0;
-    int samples = 0;
     void set_local_altitude();
 
 public:
@@ -58,16 +55,15 @@ void Altimeter::setup()
     altimeter.setOversampleRate(5); //read every 130 ms
     altimeter.enableEventFlags();
     timer.setup();
-    //read for 1 second to set local altitude
+    //read for 7 second to set local altitude
     while (timer.execute_for())
     {
-        if (timer.execute_every(130))
+        if (timer.execute_every())
         {
             set_local_altitude();
         }
         Serial.println("\n Local altitude in setup: " + (String)local_altitude);
     }
-    // local_altitude /= samples;
 }
 
 String Altimeter::log_altitude()

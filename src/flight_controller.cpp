@@ -2,6 +2,7 @@
 #include "Altimeter.h"
 #include "PID_v1.h"
 #include "Actuator.h"
+#include "DataLogger.h"
 
 #define YAW_SERVO_PIN 9   // Y axis
 #define PITCH_SERVO_PIN 8 // X axis
@@ -13,6 +14,7 @@ Actuator yaw_servo;
 Actuator pitch_servo;
 Gyroscope gyro;
 Altimeter altimeter;
+DataLogger dataLogger;
 double yaw_servoPID_out, pitch_servoPID_out;
 double yawSetpoint = 0.0, pitchSetpoint = 0.0; //values to read to correct rocket orientation
 double kp = 50, kd = 0.25, ki = 1;
@@ -31,6 +33,7 @@ void setup()
   //Serial.println(F("Initializing I2C devices..."));
   gyro.setup(INTERRUPT_PIN);
   altimeter.setup();
+  dataLogger.setup();
   //SERVO setup
   pitch_servo.setupServo(PITCH_SERVO_PIN);
   yaw_servo.setupServo(YAW_SERVO_PIN);
@@ -54,13 +57,11 @@ void loop()
   yaw_pid = eulers.y * 55;
   if (yawPID.Compute())
   {
-    //Print current val vs setpoint
     yaw_servo.moveServo(yaw_servoPID_out);
   }
   if (pitchPID.Compute())
   {
-    //Serial.println((String)eulers.x + ",  " + (String)pitch_servoPID_out);
     pitch_servo.moveServo(pitch_servoPID_out);
   }
-  Serial.println(altimeter.log_altitude());
+  dataLogger.collectReport(gyro.log_euler(), gyro.log_acceleration(), altimeter.log_altitude(), yaw_servo.logServoPos(), pitch_servo.logServoPos());
 }
