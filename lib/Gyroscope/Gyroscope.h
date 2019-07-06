@@ -4,10 +4,7 @@
 #include <vector>
 
 //#define DEBUG
-#define OUTPUT_READABLE
-#define deltat 0.001f
-#define gyroMeasError 3.14159265358979f * (5.0f / 180.0f)
-#define beta sqrt(3.0f / 4.0f) * gyroMeasError
+//#define STR_LOG
 
 #ifdef DEBUG
 #define LOG(X) Serial.println((X));
@@ -58,12 +55,15 @@ public:
 
     Quaternion getOrientantion();
     VectorFloat getEuler();
+    VectorInt16 getAcceleration();
 
+#ifdef STR_LOG
     String log_Orientation(bool showHeader = false);
     String log_raw_quaternion();
     String log_offsets();
     String log_euler(bool showHeader = false);
     String log_acceleration(bool showHeader = false);
+#endif
 };
 
 volatile bool *ptr;
@@ -238,7 +238,13 @@ VectorFloat Gyroscope::getEuler()
     return eul;
 }
 
-#ifdef DEBUG
+VectorInt16 Gyroscope::getAcceleration()
+{
+    return this->acceleration;
+}
+
+#ifdef STR_LOG
+
 String Gyroscope::log_Orientation(bool showHeader)
 {
     Quaternion q = getOrientantion();
@@ -275,7 +281,7 @@ String Gyroscope::log_offsets()
                (String)gyro_offset.z + ", ";
     return header + l;
 }
-#endif
+
 String Gyroscope::log_euler(bool showHeader)
 {
     VectorFloat EulerDeg = getEuler();
@@ -305,7 +311,7 @@ String Gyroscope::log_acceleration(bool showHeader)
     }
     return l;
 }
-
+#endif
 void Gyroscope::meansensors()
 {
     long i = 0, buff_ax = 0, buff_ay = 0, buff_az = 0, buff_gx = 0, buff_gy = 0, buff_gz = 0;

@@ -4,6 +4,9 @@
 #include "Timer.h"
 #include "SimpleKalmanFilter.h"
 
+//#define STR_LOG
+//#define BIN_LOG
+
 class Altimeter
 {
 private:
@@ -20,7 +23,12 @@ public:
     ~Altimeter();
     void setup();
     float getRocketAltitude();
-    String log_altitude();
+#ifdef STR_LOG
+    String log_altitude()
+    {
+        return (String)rocket_altitude;
+    }
+#endif
 };
 
 Altimeter::Altimeter()
@@ -64,9 +72,4 @@ void Altimeter::setup()
         }
         Serial.println("\n Local altitude in setup: " + (String)local_altitude);
     }
-}
-
-String Altimeter::log_altitude()
-{
-    return (String)rocket_altitude;
 }

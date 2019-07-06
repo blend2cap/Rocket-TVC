@@ -44,8 +44,6 @@ void setup()
   pitchPID.SetMode(AUTOMATIC);
 }
 
-//maps input angle in deg to PWM
-
 void loop()
 {
 
@@ -63,5 +61,6 @@ void loop()
   {
     pitch_servo.moveServo(pitch_servoPID_out);
   }
-  dataLogger.collectReport(gyro.log_euler(), gyro.log_acceleration(), altimeter.log_altitude(), yaw_servo.logServoPos(), pitch_servo.logServoPos());
+
+  dataLogger.storeData(gyro, altimeter, yaw_servoPID_out, pitch_servoPID_out, 100L); //will work on error handling later
 }
