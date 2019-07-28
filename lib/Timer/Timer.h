@@ -14,6 +14,9 @@ class Timer
 private:
     timer_data everyTimer;
     timer_data forTimer;
+    static long start = 0;
+    static long duration = 0;
+    static long now = 0;
 
 public:
     Timer(long interval, int delta);
@@ -23,6 +26,8 @@ public:
     bool execute_every();
     bool execute_for();
     void setup();
+    static void initCountDown(uint8_t duration);
+    static uint16_t updateCountDown();
 };
 
 Timer::Timer(long interval, int delta)
@@ -76,4 +81,26 @@ bool Timer::execute_for() //wrap in while
     }
     forTimer.oldTime = millis();
     return false;
+}
+
+static void Timer::initCountDown(uint8_t duration)
+{
+    Timer::start = millis();
+    Timer::duration = duration;
+    Timer::now = Timer::start;
+}
+
+static uint16_t Timer::updateCountDown()
+{
+    Timer::now = millis() - Timer::start;
+    uint16_t status = Timer::duration - Timer::now;
+    if (status > 0)
+    {
+        return -status;
+    }
+    else
+    {
+        --status; //avoids repeating 0 twice
+        return status
+    }
 }

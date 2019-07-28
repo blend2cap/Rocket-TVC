@@ -42,7 +42,9 @@ private:
     // uint8_t MISO = 12;
     // uint8_t MOSI = 11;
     // uint8_t CLK = 13;
-    void collectData(Gyroscope &gyro, Altimeter &altimeter, double pid_x, double pid_y, long time);
+    Gyroscope *gyro = nullptr;
+    Altimeter *altimeter = nullptr;
+    void collectData(const double pid_x, const double pid_y, const long time);
 
 #ifdef STR_LOG
     template <typename T>
@@ -54,9 +56,9 @@ private:
     inline String value(const T &val, Others... rest) { return val + value(rest...); }
 #endif
 public:
-    DataLogger(uint16_t log_res = 50); //log_res in hertz
+    DataLogger(Gyroscope *gyro, Altimeter *altimeter, uint16_t log_res = 50); //log_res in hertz
     uint8_t setup();
-    uint8_t storeData(Gyroscope &gyro, Altimeter &altimeter, double pid_x, double pid_y, long time);
+    uint8_t storeData(double pid_x, double pid_y, long time);
 
 #ifdef STR_LOG //0 = good; 1=bad;
     template <class... T>
@@ -65,8 +67,10 @@ public:
     ~DataLogger();
 };
 
-DataLogger::DataLogger(uint16_t log_res)
+DataLogger::DataLogger(Gyroscope *gyro, Altimeter *altimeter, uint16_t log_res)
 {
+    this->gyro = gyro;
+    this->altimeter = altimeter;
     long t = 1000 / log_res;
     timer = Timer(1000, t);
 }
@@ -77,12 +81,9 @@ DataLogger::~DataLogger()
 
 uint8_t DataLogger::setup()
 {
-    if (!sd.begin(SS))
-        return 1;
-    if (!Fat16::init(&sd))
-        return 1;
-
-    return 0;
+    if ((!sd.begin(SS)) || (!Fat16::init(&sd)))
+        return ERROR;
+    return SUCCESS;
 }
 
 #ifdef STR_LOG
@@ -107,25 +108,25 @@ uint8_t DataLogger::collectReport(T... args)
 }
 #endif
 
-void DataLogger::collectData(Gyroscope &gyro, Altimeter &altimeter, double pid_x, double pid_y, long time)
+void DataLogger::collectData(const double pid_x, const double pid_y, const long time)
 {
-    rec.gyro.x = gyro.getEuler().x;
-    rec.gyro.y = gyro.getEuler().y;
-    rec.gyro.z = gyro.getEuler().z;
-    rec.accelerometer.x = gyro.getAcceleration().x;
-    rec.accelerometer.y = gyro.getAcceleration().y;
-    rec.accelerometer.z = gyro.getAcceleration().z;
-    rec.altimeter = altimeter.getRocketAltitude();
+    rec.gyro.x = this->gyro->getEuler().x;
+    rec.gyro.y = this->gyro->getEuler().y;
+    rec.gyro.z = this->gyro->getEuler().z;
+    rec.accelerometer.x = this->gyro->getAcceleration().x;
+    rec.accelerometer.y = this->gyro->getAcceleration().y;
+    rec.accelerometer.z = this->gyro->getAcceleration().z;
+    rec.altimeter = this->altimeter->getRocketAltitude();
     rec.pid_x = (float)pid_x;
     rec.pid_y = (float)pid_y;
     rec.time = time;
 }
 
-uint8_t DataLogger::storeData(Gyroscope &gyro, Altimeter &altimeter, double pid_x, double pid_y, long time)
+uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
 {
     if (timer.execute_every())
     {
-        collectData(gyro, altimeter, pid_x, pid_y, time);
+        collectData(pid_x, pid_y, time);
         // const auto report = value(args...);
         if (!file.open("log.dat", O_RDWR | O_CREAT | O_AT_END))
         {
