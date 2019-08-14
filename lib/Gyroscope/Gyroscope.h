@@ -51,7 +51,7 @@ private:
 public:
     Gyroscope();
     void setup(int interrupt_pin);
-    void readAngle();
+    uint8_t readAngle();
 
     Quaternion getOrientantion();
     VectorFloat getEuler();
@@ -104,7 +104,7 @@ void Gyroscope::setup(int interrupt_pin)
     }
     else
     {
-        // ERROR!
+        // 1!
         // 1 = initial memory load failed
         // 2 = DMP configuration updates failed
         // (if it's going to break, usually the code will be 1)
@@ -130,13 +130,13 @@ void Gyroscope::setQuaternionOffset()
     }
 }
 
-void Gyroscope::readAngle()
+uint8_t Gyroscope::readAngle()
 {
     // if programming failed, don't try to do anything
     if (!dmpReady)
     {
         LOG("Dmp is not ready");
-        return;
+        return 1;
     }
 
     // wait for MPU interrupt or extra packet(s) available
@@ -197,8 +197,12 @@ void Gyroscope::readAngle()
             //LOG("dmp read successfully");
         }
         else
+        {
             LOG("cannot read quaternion");
+            return 1;
+        }
     }
+    return 0;
 }
 
 Quaternion Gyroscope::getOrientantion()

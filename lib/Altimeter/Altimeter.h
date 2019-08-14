@@ -49,9 +49,14 @@ void Altimeter::set_local_altitude()
 
 float Altimeter::getRocketAltitude()
 {
-    if (timer.execute_every(130))
+    // if (timer.execute_every(130))
+    //     rocket_altitude = filter.updateEstimate(altimeter.readAltitude()) - local_altitude;
+    // // rocket_altitude = altimeter.readAltitude() - local_altitude;
+    // return rocket_altitude;
+    timer.execute_every([&] {
         rocket_altitude = filter.updateEstimate(altimeter.readAltitude()) - local_altitude;
-    // rocket_altitude = altimeter.readAltitude() - local_altitude;
+    },
+                        130);
     return rocket_altitude;
 }
 
@@ -64,12 +69,16 @@ void Altimeter::setup()
     altimeter.enableEventFlags();
     timer.setup();
     //read for 7 second to set local altitude
-    while (timer.execute_for())
-    {
-        if (timer.execute_every())
-        {
-            set_local_altitude();
-        }
-        Serial.println("\n Local altitude in setup: " + (String)local_altitude);
-    }
+    // while (timer.execute_for())
+    // {
+    //     if (timer.execute_every())
+    //     {
+    //  set_local_altitude();
+    //     }
+    //     Serial.println("\n Local altitude in setup: " + (String)local_altitude);
+    // }
+
+    timer.execute_for([&] {
+        timer.execute_every([&] { this->set_local_altitude(); }); //doesn't compile if not wrapped in lambda
+    });
 }

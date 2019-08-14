@@ -3,6 +3,7 @@
 #include "PID_v1.h"
 #include "Actuator.h"
 #include "DataLogger.h"
+#include "LogTimer.hpp"
 
 #define YAW_SERVO_PIN 9   // Y axis
 #define PITCH_SERVO_PIN 8 // X axis
@@ -21,15 +22,16 @@ const double kp = 50, kd = 0.25, ki = 1;
 double yaw_pid = 0, pitch_pid = 0;
 PID yawPID(&yaw_pid, &yaw_servoPID_out, &yawSetpoint, kp, ki, kd, DIRECT);
 PID pitchPID(&pitch_pid, &pitch_servoPID_out, &pitchSetpoint, kp, ki, kd, DIRECT);
+LogTimer *logTimer;
 
 void setup()
 {
   // initialize serial communication
   // (115200 chosen because it is required for Teapot Demo output, but it's
   // really up to you depending on your project)
-  Serial.begin(9600);       //38400 looks fine, 115200 resets the board
-  Timer::initCountDown(60); //init T- 60 seconds
-
+  Serial.begin(9600); //38400 looks fine, 115200 resets the board
+  //Timer::initCountDown(60); //init T- 60 seconds
+  logTimer->initLogTimer();
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
   gyro.setup(INTERRUPT_PIN);
@@ -63,5 +65,14 @@ void loop()
     pitch_servo.moveServo(pitch_servoPID_out);
   }
 
-  dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, 100L); //will work on error handling later
+  dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, logTimer->getLogTimer()); //will work on error handling later
+}
+
+void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw)
+{
+  Timer tim = Timer(5000, 100);
+  // while (tim.execute_for())
+  // {
+  //   gyro.readAngle();
+  //   }
 }

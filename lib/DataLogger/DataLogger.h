@@ -122,6 +122,7 @@ void DataLogger::collectData(const double pid_x, const double pid_y, const long 
     rec.time = time;
 }
 
+/*
 uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
 {
     if (timer.execute_every())
@@ -142,5 +143,28 @@ uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
         file.close();
         return SUCCESS;
     }
+    return WAIT;
+}
+*/
+
+uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
+{
+    timer.execute_every([&] {
+        collectData(pid_x, pid_y, time);
+        // const auto report = value(args...);
+        if (!file.open("log.dat", O_RDWR | O_CREAT | O_AT_END))
+        {
+            return ERROR;
+        }
+        file.write((const uint8_t *)&rec, sizeof(rec));
+
+        if (file.writeError)
+        {
+            file.close();
+            return ERROR;
+        }
+        file.close();
+        return SUCCESS;
+    });
     return WAIT;
 }

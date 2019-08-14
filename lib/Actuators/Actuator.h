@@ -2,7 +2,8 @@
 #include "Servo.h"
 
 //MG995 datasheet: https://www.electronicoscaldas.com/datasheet/MG995_Tower-Pro.pdf
-#define SERVO_BASE 1440 //  90° for unknow reason, should be 1500
+//#define SERVO_BASE 1440 //  90° for unknow reason, should be 1500
+#define SERVO_BASE 1500
 #define PULSE 2666.6667 //  elapsed micros for 1° turn at 6V supply (actual time taken)
 #define DEG_PULSE 10    //  how many pulse in 1° (pulse to command 1° turn, not speed or time taken)
 #define SPEED 3         //  speed in millis for 1° turn (SPEED = PULSE / 1000)
@@ -35,7 +36,7 @@ Actuator::~Actuator()
 {
 }
 
-void Actuator::setupServo(int pin, int min = 600, int max = 2400)
+void Actuator::setupServo(int pin, int min = 500, int max = 2500)
 {
     servo.attach(pin, min, max);
     lastUpdate = millis();

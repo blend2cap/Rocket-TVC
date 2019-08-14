@@ -14,21 +14,34 @@ class Timer
 private:
     timer_data everyTimer;
     timer_data forTimer;
-    static long start = 0;
-    static long duration = 0;
-    static long now = 0;
+    static unsigned long T_zero;
+    //static long duration = 0;
 
 public:
     Timer(long interval, int delta);
     Timer();
     ~Timer();
-    bool execute_every(int delta);
-    bool execute_every();
-    bool execute_for();
+    template <typename function>
+    void execute_every(function func, int delta = 100);
+    template <typename function>
+    void execute_for(function func);
     void setup();
-    static void initCountDown(uint8_t duration);
-    static uint16_t updateCountDown();
+    static void initT();
+    static unsigned long getGlobalT();
+    // static void initCountDown(uint8_t duration);
+    // static uint16_t updateCountDown();
 };
+
+//initT called at startup
+void Timer::initT()
+{
+    Timer::T_zero = millis();
+}
+
+unsigned long Timer::getGlobalT()
+{
+    return (millis() - Timer::T_zero);
+}
 
 Timer::Timer(long interval, int delta)
 {
@@ -49,30 +62,46 @@ void Timer::setup()
     forTimer.oldTime = millis();
     everyTimer.oldTime = millis();
 }
+template <typename function>
+void Timer::execute_every(function func, int delta)
+{
+    everyTimer.current = millis();
+    bool state = everyTimer.current <= everyTimer.oldTime + delta;
+    if (state)
+    {
+        return;
+    }
+    everyTimer.oldTime = millis();
+    func();
+}
 
+template <typename function>
+void Timer::execute_for(function func)
+{
+    forTimer.current = millis();
+    bool state = forTimer.current <= forTimer.oldTime + forTimer.interval;
+    while (state)
+    {
+        func();
+    }
+    if (!state)
+        forTimer.oldTime = millis();
+}
+
+/*
 bool Timer::execute_every(int delta) //wrap in if
 {
     everyTimer.current = millis();
     if (everyTimer.current <= everyTimer.oldTime + delta)
     {
         return false;
+        
     }
     everyTimer.oldTime = millis();
     return true;
 }
 
-bool Timer::execute_every() //wrap in if
-{
-    everyTimer.current = millis();
-    if (everyTimer.current <= everyTimer.oldTime + this->everyTimer.interval)
-    {
-        return false;
-    }
-    everyTimer.oldTime = millis();
-    return true;
-}
-
-bool Timer::execute_for() //wrap in while
+void Timer::execute_for() //wrap in while
 {
     forTimer.current = millis();
     if (forTimer.current <= forTimer.oldTime + forTimer.interval)
@@ -104,3 +133,4 @@ static uint16_t Timer::updateCountDown()
         return status
     }
 }
+*/
