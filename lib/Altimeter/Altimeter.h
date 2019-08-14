@@ -79,6 +79,6 @@ void Altimeter::setup()
     // }
 
     timer.execute_for([&] {
-        timer.execute_every([&] { this->set_local_altitude(); }); //doesn't compile if not wrapped in lambda
+        timer.execute_every([&] { this->set_local_altitude(); }, 130); //doesn't compile if not wrapped in lambda
     });
 }

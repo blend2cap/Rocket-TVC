@@ -59,7 +59,7 @@ public:
     DataLogger(Gyroscope *gyro, Altimeter *altimeter, uint16_t log_res = 50); //log_res in hertz
     uint8_t setup();
     uint8_t storeData(double pid_x, double pid_y, long time);
-
+    uint8_t check();
 #ifdef STR_LOG //0 = good; 1=bad;
     template <class... T>
     uint8_t collectReport(T... args); // 0=ok; 1=bad; 2=waiting
@@ -146,6 +146,29 @@ uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
     return WAIT;
 }
 */
+
+uint8_t DataLogger::check()
+{
+    if (!file.open("log.dat", O_RDWR | O_CREAT | O_AT_END))
+    {
+        return ERROR;
+    }
+    struct test
+    {
+        int checkme = 1;
+        long t = 1000;
+    };
+    test rec;
+    file.write((const uint8_t *)&rec, sizeof(rec));
+    if (file.writeError)
+    {
+        file.close();
+        return ERROR;
+    }
+    if (!file.remove("log.dat"))
+        return ERROR;
+    return SUCCESS;
+}
 
 uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
 {

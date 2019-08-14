@@ -26,22 +26,10 @@ public:
     template <typename function>
     void execute_for(function func);
     void setup();
-    static void initT();
-    static unsigned long getGlobalT();
+
     // static void initCountDown(uint8_t duration);
     // static uint16_t updateCountDown();
 };
-
-//initT called at startup
-void Timer::initT()
-{
-    Timer::T_zero = millis();
-}
-
-unsigned long Timer::getGlobalT()
-{
-    return (millis() - Timer::T_zero);
-}
 
 Timer::Timer(long interval, int delta)
 {

@@ -24,6 +24,8 @@ PID yawPID(&yaw_pid, &yaw_servoPID_out, &yawSetpoint, kp, ki, kd, DIRECT);
 PID pitchPID(&pitch_pid, &pitch_servoPID_out, &pitchSetpoint, kp, ki, kd, DIRECT);
 LogTimer *logTimer;
 
+void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw, DataLogger &datalog);
+
 void setup()
 {
   // initialize serial communication
@@ -31,6 +33,7 @@ void setup()
   // really up to you depending on your project)
   Serial.begin(9600); //38400 looks fine, 115200 resets the board
   //Timer::initCountDown(60); //init T- 60 seconds
+
   logTimer->initLogTimer();
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
@@ -45,6 +48,9 @@ void setup()
   yawPID.SetMode(AUTOMATIC);
   pitchPID.SetOutputLimits(MIN_SERVO, MAX_SERVO);
   pitchPID.SetMode(AUTOMATIC);
+  //end setup
+  //Start testing
+  Test_Strumentation(gyro, altimeter, pitch_servo, yaw_servo, dataLogger);
 }
 
 void loop()
@@ -54,7 +60,7 @@ void loop()
   altimeter.getRocketAltitude();
   //update PID input
   VectorFloat eulers = gyro.getEuler();
-  pitch_pid = eulers.x * 55;
+  pitch_pid = eulers.x * 55; //*55 for debug
   yaw_pid = eulers.y * 55;
   if (yawPID.Compute())
   {
@@ -68,11 +74,45 @@ void loop()
   dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, logTimer->getLogTimer()); //will work on error handling later
 }
 
-void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw)
+void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw, DataLogger &datalog)
 {
   Timer tim = Timer(5000, 100);
-  // while (tim.execute_for())
-  // {
-  //   gyro.readAngle();
-  //   }
+  uint16_t state = 0;
+  uint8_t cont = 0;
+  float util;
+
+  for (uint8_t iter = 0; iter < 4; iter++)
+  {
+    tim.execute_for([&] { state += gyro.readAngle(); cont++; });
+    //if more than 25% of reads fails
+    util = float(state) / float(cont);
+    if (util > 0.25f)
+    {
+      Serial.print(F("Gyroscope error: "));
+      Serial.println(util);
+      continue;
+    }
+
+    tim.execute_for([&] { util = altimeter.getRocketAltitude(); });
+    if (util < 0.f)
+    {
+      Serial.println(F("Looks like we're diving!"));
+      continue;
+    }
+    if (pitch.checkServo() != 0)
+    {
+      Serial.println(F("Pitch servo failed"));
+      continue;
+    }
+    if (yaw.checkServo() != 0)
+    {
+      Serial.println(F("Yaw servo failed"));
+      continue;
+    }
+    if (datalog.check() != 0)
+    {
+      Serial.println(F("Cannot save flight data"));
+      continue;
+    }
+  }
 }

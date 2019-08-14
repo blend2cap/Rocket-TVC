@@ -26,6 +26,7 @@ public:
 
     void setupServo(int pin, int min, int max);
     void moveServo(int pulse);
+    uint8_t checkServo();
     const String logServoPos();
     //void logData(SD card, Data data)
 };
@@ -63,6 +64,18 @@ void Actuator::moveServo(int pid_pulse)
     this->delta_t = SPEED * abs(target - pos);
     servo.writeMicroseconds(target);
     pos = target;
+}
+
+uint8_t Actuator::checkServo()
+{
+    for (int i = 1200; i < 1800; i += 100)
+    {
+        moveServo(i);
+    }
+    moveServo(SERVO_BASE);
+    if (servo.readMicroseconds() != SERVO_BASE)
+        return 1;
+    return 0;
 }
 
 const String Actuator::logServoPos()
