@@ -4,14 +4,23 @@
 class LogTimer
 {
 private:
-    unsigned long T0;
+    static unsigned long T0;
 
 public:
     LogTimer();
     ~LogTimer();
-    void initLogTimer();
-    unsigned long getLogTimer();
+
+    static void initLogT()
+    {
+        T0 = millis();
+    }
+    static const long getT()
+    {
+        return millis() - T0;
+    }
 };
+
+unsigned long LogTimer::T0;
 
 LogTimer::LogTimer(/* args */)
 {
@@ -19,13 +28,4 @@ LogTimer::LogTimer(/* args */)
 
 LogTimer::~LogTimer()
 {
-}
-
-void LogTimer::initLogTimer()
-{
-    T0 = millis();
-}
-unsigned long LogTimer::getLogTimer()
-{
-    return millis() - T0;
 }

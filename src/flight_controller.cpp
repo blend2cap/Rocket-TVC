@@ -22,7 +22,7 @@ const double kp = 50, kd = 0.25, ki = 1;
 double yaw_pid = 0, pitch_pid = 0;
 PID yawPID(&yaw_pid, &yaw_servoPID_out, &yawSetpoint, kp, ki, kd, DIRECT);
 PID pitchPID(&pitch_pid, &pitch_servoPID_out, &pitchSetpoint, kp, ki, kd, DIRECT);
-LogTimer *logTimer;
+//LogTimer *logTimer;
 
 void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw, DataLogger &datalog);
 
@@ -34,7 +34,8 @@ void setup()
   Serial.begin(9600); //38400 looks fine, 115200 resets the board
   //Timer::initCountDown(60); //init T- 60 seconds
 
-  logTimer->initLogTimer();
+  // logTimer->initLogTimer();
+  LogTimer::initLogT();
   // initialize device
   //Serial.println(F("Initializing I2C devices..."));
   gyro.setup(INTERRUPT_PIN);
@@ -71,7 +72,8 @@ void loop()
     pitch_servo.moveServo(pitch_servoPID_out);
   }
 
-  dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, logTimer->getLogTimer()); //will work on error handling later
+  //dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, logTimer->getLogTimer()); //will work on error handling later
+  dataLogger.storeData(yaw_servoPID_out, pitch_servoPID_out, LogTimer::getT()); //will work on error handling later
 }
 
 void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, Actuator &yaw, DataLogger &datalog)
@@ -88,30 +90,35 @@ void Test_Strumentation(Gyroscope &gyro, Altimeter &altimeter, Actuator &pitch, 
     util = float(state) / float(cont);
     if (util > 0.25f)
     {
-      Serial.print(F("Gyroscope error: "));
-      Serial.println(util);
+      // Serial.print(F("Gyroscope error: "));
+      // Serial.println(util);
+      dataLogger.logError("Gyroscope error, failed " + util, LogTimer::getT());
       continue;
     }
 
     tim.execute_for([&] { util = altimeter.getRocketAltitude(); });
     if (util < 0.f)
     {
-      Serial.println(F("Looks like we're diving!"));
+      // Serial.println(F("Looks like we're diving!"));
+      dataLogger.logError("Altimeter error, altitude recorded: " + util, LogTimer::getT());
       continue;
     }
     if (pitch.checkServo() != 0)
     {
-      Serial.println(F("Pitch servo failed"));
+      // Serial.println(F("Pitch servo failed"));
+      dataLogger.logError("Pitch servo didn't respond", LogTimer::getT());
       continue;
     }
     if (yaw.checkServo() != 0)
     {
-      Serial.println(F("Yaw servo failed"));
+      // Serial.println(F("Yaw servo failed"));
+      dataLogger.logError("Yaw servo didn't respond", LogTimer::getT());
       continue;
     }
     if (datalog.check() != 0)
     {
-      Serial.println(F("Cannot save flight data"));
+      // Serial.println(F("Cannot save flight data"));
+      dataLogger.logError("Cannot save flight data", LogTimer::getT());
       continue;
     }
   }

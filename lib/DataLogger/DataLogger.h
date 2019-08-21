@@ -34,7 +34,8 @@ class DataLogger
 {
 private:
     SdCard sd;
-    Fat16 file;
+    Fat16 file;       //binary file for data
+    Fat16 error_file; //text file for error
     Timer timer;
     Record rec;
     // const uint8_t CS = 4;
@@ -60,6 +61,8 @@ public:
     uint8_t setup();
     uint8_t storeData(double pid_x, double pid_y, long time);
     uint8_t check();
+    uint8_t logError(String message, const long time);
+
 #ifdef STR_LOG //0 = good; 1=bad;
     template <class... T>
     uint8_t collectReport(T... args); // 0=ok; 1=bad; 2=waiting
@@ -122,31 +125,6 @@ void DataLogger::collectData(const double pid_x, const double pid_y, const long 
     rec.time = time;
 }
 
-/*
-uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
-{
-    if (timer.execute_every())
-    {
-        collectData(pid_x, pid_y, time);
-        // const auto report = value(args...);
-        if (!file.open("log.dat", O_RDWR | O_CREAT | O_AT_END))
-        {
-            return ERROR;
-        }
-        file.write((const uint8_t *)&rec, sizeof(rec));
-
-        if (file.writeError)
-        {
-            file.close();
-            return ERROR;
-        }
-        file.close();
-        return SUCCESS;
-    }
-    return WAIT;
-}
-*/
-
 uint8_t DataLogger::check()
 {
     if (!file.open("log.dat", O_RDWR | O_CREAT | O_AT_END))
@@ -190,4 +168,23 @@ uint8_t DataLogger::storeData(double pid_x, double pid_y, long time)
         return SUCCESS;
     });
     return WAIT;
+}
+
+uint8_t DataLogger::logError(String message, const long time)
+{
+    if (!file.open("error.log", O_RDWR | O_CREAT | O_AT_END))
+    {
+        return ERROR;
+    }
+    String error = message + " at " + time + "\n";
+    char *buf;
+    error.toCharArray(buf, error.length());
+    file.write(buf);
+    if (file.writeError)
+    {
+        file.close();
+        return ERROR;
+    }
+    file.close();
+    return SUCCESS;
 }

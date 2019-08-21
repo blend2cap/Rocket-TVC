@@ -83,6 +83,7 @@ void Gyroscope::setup(int interrupt_pin)
     HardCodeCalibration();
     pinMode(interrupt_pin, INPUT);
     Serial.println(mpu.testConnection() ? "Mpu connection successfull" : "MPU connection failed");
+
     devStatus = mpu.dmpInitialize();
 
     if (devStatus == 0)
